@@ -2,23 +2,47 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/b1n/proto-book-store"
+	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	"log"
+	"net/http"
 	"os"
+	"strconv"
 )
 
-func main() {
-	bookStore := GetBookStoreConn()
+type Service struct {
+	BookStore book_store.BookStoreClient
+}
+
+func (s *Service) GetBook(ctx *gin.Context) {
+	qId := ctx.Query("id")
+	id, err := strconv.Atoi(qId)
 	getBookRequest := &book_store.GetBookRequest{
-		Id: 1,
+		Id: int32(id),
 	}
-	response, err := bookStore.GetBook(context.Background(), getBookRequest)
+	response, err := s.BookStore.GetBook(context.Background(), getBookRequest)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
-	log.Println(response)
+	ctx.JSON(http.StatusOK, response)
+}
+
+func main() {
+	s := &Service{}
+	s.BookStore = GetBookStoreConn()
+
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.New()
+	router.Use(gin.Recovery())
+
+	router.GET("/test", s.GetBook)
+
+	if err := router.Run(":" + os.Getenv("HTTP_PORT")); err != nil {
+		log.Println(err)
+	}
 }
 
 type tokenAuth struct {
@@ -38,7 +62,9 @@ func (tokenAuth) RequireTransportSecurity() bool {
 
 func GetBookStoreConn() book_store.BookStoreClient {
 	tokenAuth := &tokenAuth{token: os.Getenv("TOKEN")}
-	conn, err := grpc.Dial(os.Getenv("ADDRESS"), grpc.WithPerRPCCredentials(tokenAuth), grpc.WithInsecure())
+	target := fmt.Sprintf("%s:%s",os.Getenv("GRPC_HOST"),os.Getenv("GRPC_PORT"))
+
+	conn, err := grpc.Dial(target, grpc.WithPerRPCCredentials(tokenAuth), grpc.WithInsecure())
 	if err != nil {
 		log.Println(err)
 	}
