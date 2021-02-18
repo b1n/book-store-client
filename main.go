@@ -5,6 +5,7 @@ import (
 	"github.com/b1n/proto-book-store"
 	"google.golang.org/grpc"
 	"log"
+	"os"
 )
 
 func main() {
@@ -36,7 +37,8 @@ func (tokenAuth) RequireTransportSecurity() bool {
 }
 
 func GetBookStoreConn() book_store.BookStoreClient {
-	conn, err := grpc.Dial("127.0.0.1:8080", grpc.WithPerRPCCredentials(&tokenAuth{token: "our_super-mega-secret_token"}), grpc.WithInsecure())
+	tokenAuth := &tokenAuth{token: os.Getenv("TOKEN")}
+	conn, err := grpc.Dial("127.0.0.1:8080", grpc.WithPerRPCCredentials(tokenAuth), grpc.WithInsecure())
 	if err != nil {
 		log.Println(err)
 	}
