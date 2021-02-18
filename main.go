@@ -38,7 +38,7 @@ func (tokenAuth) RequireTransportSecurity() bool {
 
 func GetBookStoreConn() book_store.BookStoreClient {
 	tokenAuth := &tokenAuth{token: os.Getenv("TOKEN")}
-	conn, err := grpc.Dial("127.0.0.1:8080", grpc.WithPerRPCCredentials(tokenAuth), grpc.WithInsecure())
+	conn, err := grpc.Dial(os.Getenv("ADDRESS"), grpc.WithPerRPCCredentials(tokenAuth), grpc.WithInsecure())
 	if err != nil {
 		log.Println(err)
 	}
