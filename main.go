@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 )
 
 type Service struct {
@@ -19,12 +20,20 @@ type Service struct {
 func (s *Service) GetBook(ctx *gin.Context) {
 	qId := ctx.Query("id")
 	id, err := strconv.Atoi(qId)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, err)
+		log.Println(err)
+		return
+	}
+
 	getBookRequest := &book_store.GetBookRequest{
 		Id: int32(id),
 	}
 	response, err := s.BookStore.GetBook(context.Background(), getBookRequest)
 	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, err.Error())
 		log.Println(err)
+		return
 	}
 
 	ctx.JSON(http.StatusOK, response)
@@ -62,11 +71,35 @@ func (tokenAuth) RequireTransportSecurity() bool {
 
 func GetBookStoreConn() book_store.BookStoreClient {
 	tokenAuth := &tokenAuth{token: os.Getenv("TOKEN")}
-	target := fmt.Sprintf("%s:%s",os.Getenv("GRPC_HOST"),os.Getenv("GRPC_PORT"))
+	target := fmt.Sprintf("%s:%s", os.Getenv("GRPC_HOST"), os.Getenv("GRPC_PORT"))
 
-	conn, err := grpc.Dial(target, grpc.WithPerRPCCredentials(tokenAuth), grpc.WithInsecure())
+	conn, err := grpc.Dial(target, grpc.WithUnaryInterceptor(interceptor), grpc.WithPerRPCCredentials(tokenAuth), grpc.WithInsecure())
 	if err != nil {
 		log.Println(err)
 	}
 	return book_store.NewBookStoreClient(conn)
+}
+
+func interceptor(
+	ctx context.Context,
+	method string,
+	req interface{},
+	reply interface{},
+	cc *grpc.ClientConn,
+	invoker grpc.UnaryInvoker,
+	opts ...grpc.CallOption,
+) error {
+	start := time.Now()
+
+	err := invoker(ctx, method, req, reply, cc, opts...)
+
+	fmt.Printf(`--
+	call=%v
+	req=%#v
+	reply=%#v
+	time=%v
+	err=%v
+`, method, req, reply, time.Since(start), err)
+
+	return err
 }
