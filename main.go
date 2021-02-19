@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"github.com/b1n/proto-book-store"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"log"
 	"net/http"
 	"os"
@@ -73,14 +75,13 @@ func GetBookStoreConn() book_store.BookStoreClient {
 	tokenAuth := &tokenAuth{token: os.Getenv("TOKEN")}
 	target := fmt.Sprintf("%s:%s", os.Getenv("GRPC_HOST"), os.Getenv("GRPC_PORT"))
 
-	// config := &tls.Config{}
+	config := &tls.Config{}
 
 	conn, err := grpc.Dial(
 		target,
 		grpc.WithUnaryInterceptor(interceptor),
 		grpc.WithPerRPCCredentials(tokenAuth),
-		// grpc.WithTransportCredentials(credentials.NewTLS(config)),
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(credentials.NewTLS(config)),
 	)
 	if err != nil {
 		log.Println(err)
