@@ -2,12 +2,10 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"github.com/b1n/proto-book-store"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"log"
 	"net/http"
 	"os"
@@ -75,13 +73,14 @@ func GetBookStoreConn() book_store.BookStoreClient {
 	tokenAuth := &tokenAuth{token: os.Getenv("TOKEN")}
 	target := fmt.Sprintf("%s:%s", os.Getenv("GRPC_HOST"), os.Getenv("GRPC_PORT"))
 
-	config := &tls.Config{}
+	// config := &tls.Config{}
 
 	conn, err := grpc.Dial(
 		target,
 		grpc.WithUnaryInterceptor(interceptor),
 		grpc.WithPerRPCCredentials(tokenAuth),
-		grpc.WithTransportCredentials(credentials.NewTLS(config)),
+		// grpc.WithTransportCredentials(credentials.NewTLS(config)),
+		grpc.WithInsecure(),
 	)
 	if err != nil {
 		log.Println(err)
@@ -99,18 +98,15 @@ func interceptor(
 	opts ...grpc.CallOption,
 ) error {
 	start := time.Now()
-	var err error
-	err = invoker(ctx, method, req, reply, cc, opts...)
+	err := invoker(ctx, method, req, reply, cc, opts...)
 
 	fmt.Printf(`--
 	call=%v
 	req=%#v
 	reply=%#v
 	time=%v
-`, method, req, reply, time.Since(start) )
+	err=%v
+`, method, req, reply, time.Since(start), err)
 
-	if err != nil {
-		log.Println("err=", err.Error())
-	}
 	return err
 }
