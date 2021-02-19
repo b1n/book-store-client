@@ -41,6 +41,10 @@ func (s *Service) GetBook(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+func (s *Service) Kube(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, "")
+}
+
 func main() {
 	s := &Service{}
 	s.BookStore = GetBookStoreConn()
@@ -50,6 +54,7 @@ func main() {
 	router.Use(gin.Recovery())
 
 	router.GET("/test", s.GetBook)
+	router.GET("/kube", s.Kube)
 
 	if err := router.Run(":" + os.Getenv("HTTP_PORT")); err != nil {
 		log.Println(err)
