@@ -99,7 +99,7 @@ func interceptor(
 	reply=%#v
 	time=%v
 	err=%v
-`, method, req, reply, time.Since(start), err)
+`, method, req, reply, time.Since(start), err.Error())
 
 	return err
 }
